@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#111111">
+<title>Desi Charades</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;width:100%;height:100%;font-family:Arial,sans-serif;background:#111;color:#fff;overflow:hidden}
+.app{height:100%;display:flex;align-items:center;justify-content:center}
+.screen{display:none;width:min(94vw,600px);height:100%;padding:28px 20px;overflow:auto;text-align:center}
+.screen.active{display:flex;flex-direction:column;justify-content:center;gap:16px}
+h1{font-size:46px;margin:0 0 5px} h2{font-size:32px;margin:0}
+p{color:#ddd;line-height:1.5}
+button{border:0;border-radius:16px;padding:15px 22px;font-size:18px;font-weight:700;cursor:pointer;touch-action:manipulation}
+button:active{transform:scale(.97)}
+.primary{background:#ff7a00;color:#fff}.secondary{background:#333;color:#fff}.danger{background:#b51d1d;color:#fff}
+.menu{display:flex;flex-direction:column;gap:12px}
+.card{background:#1e1e1e;border-radius:24px;padding:25px;box-shadow:0 8px 30px #0008}
+input,select{width:100%;padding:15px;border-radius:12px;border:1px solid #555;background:#222;color:#fff;font-size:17px}
+label{font-size:16px}.word{font-size:52px;font-weight:900;letter-spacing:1px;word-break:break-word}
+.timer{font-size:54px;font-weight:900}.score{font-size:25px}.status{min-height:30px;color:#ffb15c;font-weight:700}
+.controls{display:flex;gap:12px}.controls button{flex:1}
+.small{font-size:14px;color:#aaa}.gyroBox{font-size:14px;color:#bbb;background:#171717;border-radius:12px;padding:10px}
+table{width:100%;border-collapse:collapse}td,th{padding:10px;border-bottom:1px solid #444}
+.timeHint{color:#aaa;font-size:13px;margin-top:8px}
+</style>
+</head>
+<body>
+<div class="app">
+
+<section id="home" class="screen active">
+<h1>🇮🇳 Desi Charades</h1>
+<p>Hold the phone <b>VERTICALLY</b> against your forehead.<br><br>
+⬅️ <b>LEFT = PASS</b> &nbsp;·&nbsp; ➡️ <b>RIGHT = CORRECT</b></p>
+<div class="menu">
+<button class="primary" onclick="show('setup')">▶ Play</button>
+<button class="secondary" onclick="show('leaderboard');renderBoard()">🏆 Leaderboard</button>
+<button class="secondary" onclick="show('howto')">❓ How to Play</button>
+</div>
+</section>
+
+<section id="setup" class="screen">
+<h2>Game Setup</h2>
+<div class="card">
+<input id="player" maxlength="20" placeholder="Player name"><br><br>
+<select id="category">
+<option value="Mixed">Mixed</option>
+<option>Indian Food</option><option>Bollywood</option><option>Festivals</option>
+<option>Places</option><option>Cricket</option><option>Culture</option>
+<option>Famous People</option><option>Sports Stars</option><option>Everyday India</option>
+<option>Animals</option><option>Actions</option>
+</select>
+<br><br>
+<label>⏱️ <b>Game Time</b></label><br><br>
+<select id="timerSelect" onchange="toggleCustomTimer()">
+<option value="60">1 Minute</option><option value="120">2 Minutes</option>
+<option value="180">3 Minutes</option><option value="240">4 Minutes</option>
+<option value="300">5 Minutes</option><option value="custom">Custom</option>
+</select>
+<input id="customTimer" type="number" min="1" max="60" placeholder="Enter minutes" style="display:none;margin-top:12px">
+<div class="timeHint">Choose how long you want to play.</div>
+</div>
+<button class="primary" onclick="startGame()">Start Game</button>
+<button class="secondary" onclick="show('home')">Back</button>
+</section>
+
+<section id="game" class="screen">
+<div class="timer" id="timer">01:00</div>
+<div class="score">Score: <span id="score">0</span></div>
+<div class="card">
+<div class="small" id="catLabel">Mixed</div>
+<div class="word" id="word">READY</div>
+</div>
+<div class="status" id="status">Hold phone upright…</div>
+<div class="controls">
+<button class="secondary" onclick="pass()">⬅️ Pass</button>
+<button class="primary" onclick="correct()">➡️ Correct</button>
+</div>
+<button class="danger" onclick="endGame()">End Game</button>
+<div class="gyroBox" id="motion">Motion: checking…</div>
+</section>
+
+<section id="results" class="screen">
+<h2>🎉 Game Over!</h2>
+<div class="card">
+<p id="resultName"></p><div class="timer" id="finalScore">0</div><p>points</p>
+</div>
+<button class="primary" onclick="show('setup')">Play Again</button>
+<button class="secondary" onclick="show('leaderboard');renderBoard()">Leaderboard</button>
+<button class="secondary" onclick="show('home')">Home</button>
+</section>
+
+<section id="leaderboard" class="screen">
+<h2>🏆 Leaderboard</h2>
+<div class="card"><table><thead><tr><th>#</th><th>Player</th><th>Score</th></tr></thead>
+<tbody id="board"></tbody></table></div>
+<button class="secondary" onclick="show('home')">Back</button>
+</section>
+
+<section id="howto" class="screen">
+<h2>❓ How to Play</h2>
+<div class="card">
+<p>1. Enter your player name and choose a category.</p>
+<p>2. Choose <b>1, 2, 3, 4 or 5 minutes</b>, or use Custom.</p>
+<p>3. Hold the phone <b>VERTICALLY</b> against your forehead.</p>
+<p>4. Keep it roughly upright while reading the word.</p>
+<p>5. Tilt <b>LEFT</b> to PASS.</p>
+<p>6. Tilt <b>RIGHT</b> to CORRECT.</p>
+<p>7. Return close to upright before the next gesture.</p>
+<p>Buttons remain available if motion sensors are unavailable.</p>
+</div>
+<button class="secondary" onclick="show('home')">Back</button>
+</section>
+
+</div>
+
+<script>
+"use strict";
+
+const words={
+"Indian Food":["Samosa","Biryani","Dosa","Idli","Paratha","Jalebi","Gulabjamun","Lassi","Chai","Pakora","Pavbhaji","Vada","Kheer","PaniPuri","Rasgulla"],
+"Bollywood":["Bollywood","Cinema","Hero","Villain","Song","Dance","Trailer","Director","Actor","Comedy","Drama","Interval","Climax","Superstar"],
+"Festivals":["Diwali","Holi","Eid","Navratri","Dussehra","Pongal","Onam","Baisakhi","Christmas","GaneshChaturthi","RakshaBandhan"],
+"Places":["Mumbai","Delhi","Kolkata","Chennai","Jaipur","Goa","Ladakh","Kerala","Agra","Varanasi","Hyderabad","Bengaluru"],
+"Cricket":["Cricket","Bat","Ball","Wicket","Six","Four","Bowler","Batsman","Umpire","Stadium","Boundary","Catch"],
+"Culture":["Namaste","Saree","Kurta","Diya","Rangoli","Yoga","Puja","Mandir","Mehndi","Dhol","Rickshaw","Jugaad"],
+"Famous People":["ShahRukhKhan","SalmanKhan","AamirKhan","AmitabhBachchan","Rajinikanth","AkshayKumar","RanbirKapoor","AliaBhatt","DeepikaPadukone","PriyankaChopra"],
+"Sports Stars":["ViratKohli","MSDhoni","RohitSharma","SachinTendulkar","NeerajChopra","SainaNehwal","PVSindhu","MaryKom"],
+"Everyday India":["Auto","Rickshaw","Metro","Railway","Traffic","Market","School","College","Cricket","Monsoon","Chaat","Grocery"],
+"Animals":["Cow","Tiger","Elephant","Monkey","Peacock","Lion","Dog","Cat","Camel","Horse"],
+"Actions":["Running","Dancing","Eating","Sleeping","Singing","Jumping","Swimming","Cooking","Driving","Laughing","Crying","Walking"]
+};
+
+let game={name:"Player",category:"Mixed",score:0,time:60,active:false,timer:null,baseline:null,armed:true,lastGesture:0};
+const TILT_THRESHOLD=22, RELEASE_THRESHOLD=9, COOLDOWN_MS=600;
+let audioCtx=null, orientationAttached=false;
+
+function show(id){
+document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
+document.getElementById(id).classList.add("active");
+}
+
+function toggleCustomTimer(){
+const custom=document.getElementById("customTimer");
+custom.style.display=document.getElementById("timerSelect").value==="custom"?"block":"none";
+}
+
+function getGameTime(){
+const selected=document.getElementById("timerSelect").value;
+if(selected==="custom"){
+let m=parseInt(document.getElementById("customTimer").value,10);
+if(!Number.isFinite(m)||m<1)m=1;
+return Math.min(m,60)*60;
+}
+return parseInt(selected,10);
+}
+
+function formatTime(s){
+return String(Math.floor(s/60)).padStart(2,"0")+":"+String(s%60).padStart(2,"0");
+}
+
+function getWords(){
+return game.category==="Mixed"?Object.values(words).flat():words[game.category]||[];
+}
+
+function nextWord(){
+const list=getWords();
+document.getElementById("word").textContent=list[Math.floor(Math.random()*list.length)]||"READY";
+}
+
+function tone(type){
+try{
+audioCtx=audioCtx||new(window.AudioContext||window.webkitAudioContext)();
+if(audioCtx.state==="suspended")audioCtx.resume();
+const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+o.connect(g);g.connect(audioCtx.destination);
+const n=audioCtx.currentTime;
+if(type==="correct"){
+o.type="sine";o.frequency.setValueAtTime(620,n);
+o.frequency.exponentialRampToValueAtTime(1040,n+.10);
+o.frequency.exponentialRampToValueAtTime(1320,n+.22);
+}else if(type==="pass"){
+o.type="triangle";o.frequency.setValueAtTime(300,n);
+o.frequency.exponentialRampToValueAtTime(150,n+.20);
+}else if(type==="tick"){
+o.type="square";o.frequency.setValueAtTime(850,n);
+}else{
+o.type="sine";o.frequency.setValueAtTime(500,n);
+o.frequency.exponentialRampToValueAtTime(1050,n+.25);
+}
+const d=type==="tick"?.08:.30;
+g.gain.setValueAtTime(.001,n);
+g.gain.exponentialRampToValueAtTime(type==="tick"?.06:.20,n+.015);
+g.gain.exponentialRampToValueAtTime(.001,n+d);
+o.start(n);o.stop(n+d+.02);
+}catch(e){console.log(e)}
+}
+
+function isIOS(){
+return /iPhone|iPad|iPod/i.test(navigator.userAgent) ||
+(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
+}
+
+async function requestMotion(){
+const status=document.getElementById("motion");
+
+if(!("DeviceOrientationEvent" in window)){
+status.textContent="Motion sensors unavailable. Use the buttons.";
+return;
+}
+
+try{
+if(isIOS() && typeof DeviceOrientationEvent.requestPermission==="function"){
+const permission=await DeviceOrientationEvent.requestPermission();
+if(permission!=="granted"){
+status.textContent="Motion permission denied. Use the buttons or enable Motion & Orientation Access.";
+return;
+}
+}
+if(!orientationAttached){
+window.addEventListener("deviceorientation",handleOrientation,true);
+orientationAttached=true;
+}
+game.baseline=null;game.armed=true;game.lastGesture=0;
+status.textContent="Gyro ready • Hold upright • LEFT = Pass • RIGHT = Correct";
+}catch(e){
+status.textContent="Motion access unavailable. Use the buttons.";
+console.log(e);
+}
+}
+
+function handleOrientation(e){
+if(!game.active||e.gamma==null)return;
+
+/*
+gamma is ideal here because the phone is held vertically.
+Around 0° = upright.
+Negative gamma = left tilt.
+Positive gamma = right tilt.
+*/
+const g=e.gamma;
+const status=document.getElementById("motion");
+
+if(game.baseline===null){
+game.baseline=g;
+status.textContent="Calibrating… keep phone upright";
+return;
+}
+
+/* Slowly follow small changes so the neutral position is stable. */
+if(game.armed && Math.abs(g-game.baseline)<RELEASE_THRESHOLD){
+game.baseline=game.baseline*.92+g*.08;
+status.textContent="Gyro ready • LEFT = Pass • RIGHT = Correct";
+return;
+}
+
+const delta=g-game.baseline;
+
+if(!game.armed){
+if(Math.abs(delta)<=RELEASE_THRESHOLD){
+game.armed=true;
+game.baseline=g;
+status.textContent="Ready for next tilt";
+}
+return;
+}
+
+if(Date.now()-game.lastGesture<COOLDOWN_MS)return;
+
+if(delta<=-TILT_THRESHOLD){
+game.lastGesture=Date.now();
+game.armed=false;
+pass();
+}else if(delta>=TILT_THRESHOLD){
+game.lastGesture=Date.now();
+game.armed=false;
+correct();
+}
+}
+
+function startGame(){
+game.name=document.getElementById("player").value.trim()||"Player";
+game.category=document.getElementById("category").value;
+game.time=getGameTime();
+game.score=0;game.active=true;game.baseline=null;game.armed=true;game.lastGesture=0;
+
+document.getElementById("score").textContent="0";
+document.getElementById("timer").textContent=formatTime(game.time);
+document.getElementById("catLabel").textContent=game.category;
+document.getElementById("status").textContent="Hold phone upright…";
+nextWord();
+show("game");
+
+/* Audio is started by this button click, satisfying browser autoplay rules. */
+tone("start");
+
+/* iOS permission must be requested from the user gesture. */
+requestMotion();
+
+clearInterval(game.timer);
+game.timer=setInterval(()=>{
+if(!game.active)return;
+game.time--;
+document.getElementById("timer").textContent=formatTime(game.time);
+if(game.time<=5&&game.time>0)tone("tick");
+if(game.time<=0)endGame();
+},1000);
+}
+
+function correct(){
+if(!game.active)return;
+game.score++;
+document.getElementById("score").textContent=game.score;
+document.getElementById("status").textContent="✓ CORRECT";
+tone("correct");
+nextWord();
+}
+
+function pass(){
+if(!game.active)return;
+document.getElementById("status").textContent="↩ PASS";
+tone("pass");
+nextWord();
+}
+
+function endGame(){
+if(!game.active)return;
+game.active=false;
+clearInterval(game.timer);
+game.timer=null;
+document.getElementById("finalScore").textContent=game.score;
+document.getElementById("resultName").textContent=game.name;
+saveScore();
+show("results");
+}
+
+function saveScore(){
+try{
+const board=JSON.parse(localStorage.getItem("desiCharadesBoard")||"[]");
+board.push({name:game.name,score:game.score,date:Date.now()});
+board.sort((a,b)=>b.score-a.score);
+localStorage.setItem("desiCharadesBoard",JSON.stringify(board.slice(0,20)));
+}catch(e){console.log(e)}
+}
+
+function renderBoard(){
+const body=document.getElementById("board");
+let board=[];
+try{board=JSON.parse(localStorage.getItem("desiCharadesBoard")||"[]")}catch(e){}
+body.innerHTML="";
+if(!board.length){
+body.innerHTML='<tr><td colspan="3">No scores yet</td></tr>';
+return;
+}
+board.forEach((x,i)=>{
+const tr=document.createElement("tr");
+tr.innerHTML="<td>"+(i+1)+"</td><td>"+escapeHTML(x.name)+"</td><td>"+x.score+"</td>";
+body.appendChild(tr);
+});
+}
+
+function escapeHTML(s){
+return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));
+}
+
+/* Stop an active game if the page is hidden, but don't erase scores. */
+document.addEventListener("visibilitychange",()=>{
+if(document.hidden && game.active){
+document.getElementById("status").textContent="Game paused by browser";
+}
+});
+
+window.addEventListener("beforeunload",()=>clearInterval(game.timer));
+</script>
+</body>
+</html>
